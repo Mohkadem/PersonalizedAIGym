@@ -1,7 +1,8 @@
 import React from "react";
+import CoachDashboard from "./pages/coach/CoachDashboard";
 
 const App = () => {
-  return <div>App</div>;
+  return <CoachDashboard />;
 };
 
 export default App;

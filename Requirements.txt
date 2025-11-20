@@ -1,0 +1,188 @@
+SWE363 | Web Engineering & Development
+Project | Phase Three
+Your Gym AI | Team 08 | section 01
+
+Team Members
+HASAN ALMUALIM
+SAEED ALHABIB
+MOHAMMED ALKADHIM
+AMJAD ALSADIQ
+
+1. Motivation
+Your Gym AI is a fitness platform that utilizes AI to provide personalized
+training and nutrition programs. It fills the gap between generic, one-size-fitsall programs and individual coaching from a human coach, which is typically
+pricey, limited in terms of time, and hard to find. The AI-generated programs
+adapt progressive planning using GPT-style generation, while still allowing
+each member to achieve their goals. The problem matters to be solved
+because most beginners quit a fitness program in a few weeks because they
+do not have a clear routine or adherence to an exercise program.
+
+2. Target Users
+•
+
+Guest: Unauthenticated visitor who can browse the website, preview
+features, and create an account.
+
+•
+
+Member (User): Registered user who completes onboarding, receives
+AI‑generated workouts/meals, tracks progress, and follows a weekly
+schedule.
+
+•
+
+Coach: Certified professional who manages assigned clients, edits
+workouts/meals, and leaves comments to users.
+
+•
+
+Admin: System administrator who manages users and coaches, assigns
+relationships, monitors platform metrics, and enforces policy.
+
+3. Requirements Modeling
+3.1
+
+Functional Requirements
+
+3.1.1. Guests:
+FR-1) Browse Website:
+Normal flow:
+1. Guest visits the homepage.
+2. System displays feature highlights and call‑to‑action buttons.
+3. Guest navigates sections without logging in.
+Validation points:
+- No auth required.
+System responses:
+- Display marketing content; no data stored.
+
+FR-2) Create Account:
+Normal flow:
+1. Guest clicks “Sign Up”.
+2. System shows registration form (email, password, name).
+3. Guest submits form.
+4. System validates email uniqueness and password policy.
+5. On success, user recorded and session/token created; welcome
+message shown.
+Validation points:
+- Unique email; password length ≥ 6; trimmed/lower‑cased email.
+System responses:
+- Persist user in DB; issue JWT; return success JSON and redirect to
+onboarding.
+
+3.1.2. Users:
+FR-3) Login / Logout:
+Normal flow:
+1. User opens login page and submits credentials.
+2. System validates credentials and rate limits excessive
+attempts.
+3. If valid, token is generated and session begins.
+4. User logs out; token/session invalidated.
+Validation points:
+- correct email/password; account active.
+System responses:
+- Tokens returned; 429 if too many attempts; 401 if invalid credentials.
+
+FR-4) Complete Onboarding:
+Normal flow:
+1. User provides profile and preferences (age, height, goals,
+equipment).
+2. System saves data and generates initial workout and nutrition
+plans.
+3. Plans stored and user redirected to dashboard.
+Validation points:
+- All required fields must be filled and valid.
+System responses:
+- User record updated; plan data stored in DB.
+
+FR-5) View Weekly Schedule / Today’s Workout:
+Normal flow:
+1. User opens the Schedule tab.
+2. System retrieves weekly plan and today’s workout.
+3. User selects workout to view details.
+Validation points:
+- User must be authenticated.
+System responses:
+- Display list of workouts and details from DB.
+
+FR-6) Track Workout Progress:
+Normal flow:
+1. User marks exercises as complete during workout.
+2. System updates progress metrics in real-time.
+3. Progress bar and completion percentage are shown.
+Validation points:
+- User must be authorized for that workout.
+System responses:
+- Workout progress updated in DB; confirmation displayed.
+
+3.1.3. Coaches:
+FR-7) Manage Client Workouts:
+Normal flow:
+1. Coach views list of assigned clients.
+2. Coach selects a client and opens their workout plan.
+3. Coach edits or adds workouts and saves updates.
+Validation points:
+- Coach must be assigned to that client.
+System responses:
+- Workout plan updated; confirmation displayed.
+
+FR-8) Add Comments and Regenerate Plan:
+Normal flow:
+1. Coach adds feedback or comments to a client’s exercise or
+meal.
+2. Coach optionally regenerates client plan using AI assistance.
+Validation points:
+- Rate-limit AI regeneration; ensure assigned relationship.
+System responses:
+- New plan version stored; notification sent to client.
+
+3.1.4. Admins:
+FR-9) Manage Users and Coaches:
+Normal flow:
+1. Admin logs in and opens dashboard.
+2. System displays all users and coaches.
+3. Admin views, edits, or deletes user accounts.
+Validation points:
+- Admin role required; cannot delete self.
+System responses:
+- Action recorded; changes reflected immediately.
+
+FR-10) Assign Coaches to Clients:
+Normal flow:
+1. Admin selects client and available coach.
+2. Admin confirms assignment.
+3. System links the client with the coach.
+Validation points:
+- Both IDs valid; prevent duplicate mapping.
+System responses:
+- Mapping stored; success confirmation shown.
+
+3.2
+
+Non-Functional Requirements
+
+3.2.1
+
+Performance:
+- Support 500 concurrent members with horizontal scaling of Node
+workers and DB indexes.
+
+3.2.2 Security:
+- role‑based authorization (member/coach/admin).
+- Strong password policy by Bcrypt hashing.
+- Input validation and sanitization; rate‑limiting on auth and AI routes;
+audit logs for admin actions.
+
+3.2.3 Usability & Accessibility:
+- Responsive UI across mobile/desktop.
+
+3.2.4 Compatibility:
+- role Modern browsers such as Chrome, Edge, Firefox, and Safari.
+
+3.2.5 External Constraints:
+- OpenAI API for plan/chat; MongoDB for persistence.
+- Node.js/Express backend; React + Vite frontend.
+
+4. Wireframes
+Figma Link: https://www.figma.com/design/mL3Z7r32zACxlClGFqBRL2/SWE363?node-id=0-1&t=p6tZiJNGrClOtNW6-1
+
+
