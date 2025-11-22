@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useState } from "react";
 import {
   users,
   meals,
@@ -7,293 +7,428 @@ import {
   workoutSchedules,
   buildCoachDashboardData,
 } from "../../assets/fakedb";
-
-const statCardClasses =
-  "rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur shadow-lg shadow-black/20";
+import {
+  Users,
+  Mail,
+  Target,
+  Activity,
+  Calendar,
+  UtensilsCrossed,
+  MessageSquare,
+  Edit,
+  X,
+  ChevronLeft,
+} from "lucide-react";
 
 const CoachDashboard = () => {
-  const coach = users.find((person) => person.role === "coach");
+  // Using coach Chris's ID
+  const coachId = "675000000000000000000003";
+  const dashboardData = buildCoachDashboardData(coachId, {
+    users,
+    meals,
+    nutritionPlans,
+    workouts,
+    workoutSchedules,
+  });
 
-  const dashboard = useMemo(() => {
-    if (!coach) return null;
-    return buildCoachDashboardData(coach._id, {
-      users,
-      meals,
-      nutritionPlans,
-      workouts,
-      workoutSchedules,
-    });
-  }, [coach]);
+  const [selectedClient, setSelectedClient] = useState(null);
 
-  if (!coach || !dashboard) {
+  const handleClientClick = (client) => {
+    setSelectedClient(client);
+  };
+
+  const handleBackToList = () => {
+    setSelectedClient(null);
+  };
+
+  if (selectedClient) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-slate-950 text-slate-100">
-        <div className="rounded-2xl border border-white/10 bg-white/5 px-8 py-10 text-center">
-          <p className="text-xl font-semibold">No coach profile found.</p>
-          <p className="mt-2 text-sm text-slate-400">
-            Please seed the fake database to preview the coaching hub.
-          </p>
-        </div>
-      </main>
+      <ClientDetailView
+        client={selectedClient}
+        onBack={handleBackToList}
+      />
     );
   }
 
-  const { clients } = dashboard;
-
-  const stats = {
-    activeClients: clients.length,
-    workoutsProgrammed: clients.reduce(
-      (total, client) => total + (client.workouts?.length || 0),
-      0
-    ),
-    activeNutritionPlans: clients.reduce(
-      (total, client) =>
-        total +
-        (client.nutritionPlans?.filter((plan) => plan.isActive)?.length || 0),
-      0
-    ),
-    upcomingSessions: clients.reduce((total, client) => {
-      const sessions = client.workoutSchedules?.flatMap((schedule) =>
-        schedule.schedule?.filter((day) => !day.isCompleted) ?? []
-      );
-      return total + (sessions?.length || 0);
-    }, 0),
-  };
-
-  const recentComments = meals
-    .flatMap((meal) =>
-      meal.coachComments?.map((item) => ({
-        mealName: meal.name,
-        comment: item.comment,
-        when: new Date(item.createdAt).toLocaleDateString(undefined, {
-          month: "short",
-          day: "numeric",
-        }),
-        userId: meal.userId,
-        coachId: item.coachId,
-      })) ?? []
-    )
-    .filter((entry) => entry.coachId === coach._id)
-    .slice(0, 4);
-
-  const formatGoal = (goal) =>
-    goal
-      .replace(/-/g, " ")
-      .replace(/\b\w/g, (char) => char.toUpperCase());
-
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100">
-      <div className="mx-auto max-w-6xl space-y-10 px-4 py-10 md:px-8">
-        <header className="space-y-6">
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1 text-xs uppercase tracking-[0.2em] text-slate-300">
-            Coach Command Hub
-          </div>
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <p className="text-sm uppercase tracking-[0.3em] text-slate-400">
-                Personalized AI Gym
-              </p>
-              <h1 className="mt-2 text-4xl font-semibold md:text-5xl">
-                Coach {coach.firstName} {coach.lastName}
-              </h1>
-              <p className="mt-4 max-w-2xl text-sm text-slate-400">
-                {coach.coachProfile?.bio ||
-                  "Aligned coaching view to manage plans, nutrition, and weekly sessions with clarity."}
-              </p>
-            </div>
-            <div className="rounded-2xl border border-white/5 bg-gradient-to-r from-emerald-400/20 via-teal-400/10 to-cyan-400/20 px-6 py-4 text-sm text-slate-200">
-              <p className="text-xs uppercase tracking-[0.2em] text-slate-300">
-                Focus Areas
-              </p>
-              <p className="mt-1 text-lg font-semibold text-white">
-                {coach.coachProfile?.specialization
-                  ?.map((item) => formatGoal(item))
-                  .join(" • ")}
-              </p>
-            </div>
-          </div>
-        </header>
+    <div className="min-h-screen bg-gray-900 text-gray-100 p-8">
+      <div className="max-w-7xl mx-auto">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold mb-2">Coach Dashboard</h1>
+          <p className="text-gray-400">
+            Welcome back, {dashboardData.coach?.firstName}{" "}
+            {dashboardData.coach?.lastName}
+          </p>
+        </div>
 
-        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <StatCard label="Active Clients" value={stats.activeClients} />
-          <StatCard
-            label="Workouts Programmed"
-            value={stats.workoutsProgrammed}
-          />
-          <StatCard
-            label="Active Nutrition Plans"
-            value={stats.activeNutritionPlans}
-          />
-          <StatCard label="Upcoming Sessions" value={stats.upcomingSessions} />
-        </section>
-
-        <section className="grid gap-6 lg:grid-cols-3">
-          <div className="lg:col-span-2">
-            <SectionHeader
-              title="Active Clients"
-              subtitle="Snapshot of training focus and next touchpoint"
-            />
-            <div className="space-y-4">
-              {clients.map(({ clientId, client, workouts, workoutSchedules }) => {
-                const nextSession = workoutSchedules?.[0]?.schedule?.find(
-                  (day) => !day.isCompleted
-                );
-                const nextWorkout = workouts?.find(
-                  (workout) => workout._id === nextSession?.workoutId
-                );
-                const macroSummary = client.profile?.goals
-                  ?.map((goal) => formatGoal(goal))
-                  .join(" • ");
-
-                return (
-                  <article
-                    key={clientId}
-                    className={`${statCardClasses} hover:border-emerald-400/30 transition`}
-                  >
-                    <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                      <div>
-                        <p className="text-xs uppercase tracking-[0.3em] text-slate-400">
-                          Client
-                        </p>
-                        <h3 className="text-2xl font-semibold text-white">
-                          {client.firstName} {client.lastName}
-                        </h3>
-                        <p className="text-sm text-slate-400">{macroSummary}</p>
-                      </div>
-                      <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-right">
-                        <p className="text-xs uppercase tracking-[0.3em] text-slate-400">
-                          Commitment
-                        </p>
-                        <p className="text-lg font-semibold text-white">
-                          {client.profile?.workoutDaysPerWeek}x / week
-                        </p>
-                        <p className="text-xs text-slate-400">
-                          {client.profile?.workoutSplit?.toUpperCase()} Split
-                        </p>
-                      </div>
-                    </div>
-                    <div className="mt-5 grid gap-4 md:grid-cols-2">
-                      <div className="rounded-xl border border-white/5 bg-slate-900/60 p-4">
-                        <p className="text-xs uppercase tracking-[0.3em] text-slate-500">
-                          Next Session
-                        </p>
-                        {nextWorkout ? (
-                          <>
-                            <p className="mt-2 text-lg font-semibold text-white">
-                              {nextWorkout.name}
-                            </p>
-                            <p className="text-sm text-slate-400">
-                              {nextWorkout.description}
-                            </p>
-                          </>
-                        ) : (
-                          <p className="mt-2 text-sm text-slate-500">
-                            No upcoming workout scheduled.
-                          </p>
-                        )}
-                      </div>
-                      <div className="rounded-xl border border-white/5 bg-slate-900/60 p-4">
-                        <p className="text-xs uppercase tracking-[0.3em] text-slate-500">
-                          Training Notes
-                        </p>
-                        <p className="mt-2 text-sm text-slate-300">
-                          {nextWorkout?.notes ||
-                            "Keep consistency high, focus on progressive overload and adherence."}
-                        </p>
-                        <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-400">
-                          {nextWorkout?.exercises?.slice(0, 3).map((exercise) => (
-                            <span
-                              key={exercise.name}
-                              className="rounded-full border border-white/10 px-3 py-1"
-                            >
-                              {exercise.name}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
+        <div className="bg-gray-800 rounded-lg shadow-lg overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-700">
+            <h2 className="text-xl font-semibold flex items-center gap-2">
+              <Users className="w-5 h-5" />
+              Clients ({dashboardData.clients.length})
+            </h2>
           </div>
 
-          <aside className="space-y-6">
-            <div className={statCardClasses}>
-              <SectionHeader
-                title="Weekly Priorities"
-                subtitle="High-level focus for this sprint"
-              />
-              <ul className="mt-4 space-y-3 text-sm text-slate-300">
-                <li className="flex items-start gap-3">
-                  <span className="mt-1 h-2 w-2 rounded-full bg-emerald-400" />
-                  Align Alice’s push day with lighter warm-up sets.
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="mt-1 h-2 w-2 rounded-full bg-cyan-400" />
-                  Reconfirm Bob’s macro targets post business trip.
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="mt-1 h-2 w-2 rounded-full bg-fuchsia-400" />
-                  Log compliance notes nightly to feed AI regeneration.
-                </li>
-              </ul>
+          {dashboardData.clients.length === 0 ? (
+            <div className="p-8 text-center text-gray-400">
+              No clients assigned yet.
             </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-750 border-b border-gray-700">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                      Client
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                      Fitness Level
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                      Goals
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                      Active Plans
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                      Workouts
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                      Status
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-700">
+                  {dashboardData.clients.map((clientData) => {
+                    const client = clientData.client;
+                    const activePlans = clientData.nutritionPlans.filter(
+                      (p) => p.isActive
+                    ).length;
+                    const totalWorkouts = clientData.workouts.length;
+                    const completedWorkouts = clientData.workouts.filter(
+                      (w) => w.isCompleted
+                    ).length;
 
-            <div className={statCardClasses}>
-              <SectionHeader
-                title="Latest Feedback"
-                subtitle="Recent meal or workout comments"
-              />
-              <div className="mt-4 space-y-4">
-                {recentComments.length === 0 && (
-                  <p className="text-sm text-slate-500">
-                    No comments logged yet. Keep sharing timely notes.
-                  </p>
-                )}
-                {recentComments.map((entry) => {
-                  const client = users.find((person) => person._id === entry.userId);
-                  return (
-                    <div
-                      key={`${entry.mealName}-${entry.when}`}
-                      className="rounded-xl border border-white/5 bg-slate-900/60 p-4"
-                    >
-                      <p className="text-xs uppercase tracking-[0.3em] text-slate-500">
-                        {entry.when}
-                      </p>
-                      <p className="mt-2 text-sm font-semibold text-white">
-                        {client?.firstName} • {entry.mealName}
-                      </p>
-                      <p className="mt-1 text-sm text-slate-300">
-                        “{entry.comment}”
-                      </p>
-                    </div>
-                  );
-                })}
-              </div>
+                    return (
+                      <tr
+                        key={client._id}
+                        onClick={() => handleClientClick(clientData)}
+                        className="hover:bg-gray-750 cursor-pointer transition-colors"
+                      >
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div>
+                              <div className="text-sm font-medium text-gray-100">
+                                {client.firstName} {client.lastName}
+                              </div>
+                              <div className="text-sm text-gray-400 flex items-center gap-1">
+                                <Mail className="w-3 h-3" />
+                                {client.email}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-900/30 text-blue-300 capitalize">
+                            {client.profile.fitnessLevel}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex flex-wrap gap-1">
+                            {client.profile.goals.slice(0, 2).map((goal) => (
+                              <span
+                                key={goal}
+                                className="px-2 py-1 text-xs rounded-full bg-purple-900/30 text-purple-300 capitalize"
+                              >
+                                {goal.replace("-", " ")}
+                              </span>
+                            ))}
+                            {client.profile.goals.length > 2 && (
+                              <span className="px-2 py-1 text-xs text-gray-400">
+                                +{client.profile.goals.length - 2}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                          <div className="flex items-center gap-1">
+                            <UtensilsCrossed className="w-4 h-4" />
+                            {activePlans} active
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                          <div className="flex items-center gap-1">
+                            <Activity className="w-4 h-4" />
+                            {completedWorkouts}/{totalWorkouts}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span
+                            className={`px-2 py-1 text-xs font-medium rounded-full ${
+                              client.isActive
+                                ? "bg-green-900/30 text-green-300"
+                                : "bg-gray-700 text-gray-400"
+                            }`}
+                          >
+                            {client.isActive ? "Active" : "Inactive"}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
-          </aside>
-        </section>
+          )}
+        </div>
       </div>
-    </main>
+    </div>
   );
 };
 
-const StatCard = ({ label, value }) => (
-  <div className={`${statCardClasses} flex flex-col gap-3`}>
-    <p className="text-xs uppercase tracking-[0.3em] text-slate-400">{label}</p>
-    <p className="text-4xl font-semibold text-white">{value}</p>
-  </div>
-);
+const ClientDetailView = ({ client, onBack }) => {
+  // client is already the full clientData object from buildCoachDashboardData
+  const clientData = client;
 
-const SectionHeader = ({ title, subtitle }) => (
-  <div>
-    <p className="text-xs uppercase tracking-[0.3em] text-slate-400">
-      {subtitle}
-    </p>
-    <h2 className="mt-2 text-xl font-semibold text-white">{title}</h2>
-  </div>
-);
+  const activePlan = clientData.nutritionPlans.find((p) => p.isActive);
+  const completedWorkouts = clientData.workouts.filter((w) => w.isCompleted);
+  const upcomingWorkouts = clientData.workouts.filter((w) => !w.isCompleted);
+
+  return (
+    <div className="min-h-screen bg-gray-900 text-gray-100 p-8">
+      <div className="max-w-6xl mx-auto">
+        <button
+          onClick={onBack}
+          className="mb-6 flex items-center gap-2 text-gray-400 hover:text-gray-100 transition-colors"
+        >
+          <ChevronLeft className="w-5 h-5" />
+          Back to Clients
+        </button>
+
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold mb-2">
+            {clientData.client.firstName} {clientData.client.lastName}
+          </h1>
+          <p className="text-gray-400 flex items-center gap-2">
+            <Mail className="w-4 h-4" />
+            {clientData.client.email}
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          {/* Profile Card */}
+          <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <Users className="w-5 h-5" />
+              Profile
+            </h2>
+            <div className="space-y-3 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-400">Age</span>
+                <span className="text-gray-100">{clientData.client.profile.age} years</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">Weight</span>
+                <span className="text-gray-100">{clientData.client.profile.weight} kg</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">Height</span>
+                <span className="text-gray-100">{clientData.client.profile.height} cm</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">Gender</span>
+                <span className="text-gray-100 capitalize">
+                  {clientData.client.profile.gender}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">Fitness Level</span>
+                <span className="px-2 py-1 text-xs rounded-full bg-blue-900/30 text-blue-300 capitalize">
+                  {clientData.client.profile.fitnessLevel}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Goals & Preferences */}
+          <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <Target className="w-5 h-5" />
+              Goals & Preferences
+            </h2>
+            <div className="space-y-3">
+              <div>
+                <p className="text-sm text-gray-400 mb-2">Goals</p>
+                <div className="flex flex-wrap gap-2">
+                  {clientData.client.profile.goals.map((goal) => (
+                    <span
+                      key={goal}
+                      className="px-2 py-1 text-xs rounded-full bg-purple-900/30 text-purple-300 capitalize"
+                    >
+                      {goal.replace("-", " ")}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p className="text-sm text-gray-400 mb-2">Equipment</p>
+                <div className="flex flex-wrap gap-2">
+                  {clientData.client.profile.availableEquipment.map((eq) => (
+                    <span
+                      key={eq}
+                      className="px-2 py-1 text-xs rounded-full bg-gray-700 text-gray-300 capitalize"
+                    >
+                      {eq.replace("-", " ")}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div className="text-sm">
+                <span className="text-gray-400">Workout Time: </span>
+                <span className="text-gray-100 capitalize">
+                  {clientData.client.preferences.workoutTime}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Nutrition Plan */}
+        {activePlan && (
+          <div className="bg-gray-800 rounded-lg p-6 border border-gray-700 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <UtensilsCrossed className="w-5 h-5" />
+                Active Nutrition Plan
+              </h2>
+              <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm flex items-center gap-2 transition-colors">
+                <Edit className="w-4 h-4" />
+                Edit Plan
+              </button>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div>
+                <p className="text-sm text-gray-400">Daily Calories</p>
+                <p className="text-lg font-semibold">{activePlan.dailyCalorieTarget}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-400">Protein</p>
+                <p className="text-lg font-semibold">
+                  {activePlan.macroTargets.protein}g
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-400">Carbs</p>
+                <p className="text-lg font-semibold">
+                  {activePlan.macroTargets.carbs}g
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-400">Fat</p>
+                <p className="text-lg font-semibold">
+                  {activePlan.macroTargets.fat}g
+                </p>
+              </div>
+            </div>
+            <div className="mt-4">
+              <p className="text-sm text-gray-400 mb-2">Meals ({clientData.meals.length})</p>
+              <div className="flex flex-wrap gap-2">
+                {clientData.meals.map((meal) => (
+                  <span
+                    key={meal._id}
+                    className="px-3 py-1 text-sm rounded-lg bg-gray-700 text-gray-300 capitalize"
+                  >
+                    {meal.name}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Workouts */}
+        <div className="bg-gray-800 rounded-lg p-6 border border-gray-700 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <Activity className="w-5 h-5" />
+              Workouts
+            </h2>
+            <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm flex items-center gap-2 transition-colors">
+              <Edit className="w-4 h-4" />
+              Manage Workouts
+            </button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div className="bg-gray-700/50 rounded-lg p-4">
+              <p className="text-sm text-gray-400">Total Workouts</p>
+              <p className="text-2xl font-bold">{clientData.workouts.length}</p>
+            </div>
+            <div className="bg-gray-700/50 rounded-lg p-4">
+              <p className="text-sm text-gray-400">Completed</p>
+              <p className="text-2xl font-bold text-green-400">
+                {completedWorkouts.length}
+              </p>
+            </div>
+            <div className="bg-gray-700/50 rounded-lg p-4">
+              <p className="text-sm text-gray-400">Upcoming</p>
+              <p className="text-2xl font-bold text-blue-400">
+                {upcomingWorkouts.length}
+              </p>
+            </div>
+          </div>
+          <div className="space-y-2">
+            {clientData.workouts.slice(0, 5).map((workout) => (
+              <div
+                key={workout._id}
+                className="flex items-center justify-between p-3 bg-gray-700/30 rounded-lg"
+              >
+                <div>
+                  <p className="font-medium">{workout.name}</p>
+                  <p className="text-sm text-gray-400">
+                    {workout.workoutType} • {workout.duration} min
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span
+                    className={`px-2 py-1 text-xs rounded-full ${
+                      workout.isCompleted
+                        ? "bg-green-900/30 text-green-300"
+                        : "bg-gray-700 text-gray-400"
+                    }`}
+                  >
+                    {workout.isCompleted ? "Completed" : "Pending"}
+                  </span>
+                  <button className="p-2 hover:bg-gray-700 rounded-lg transition-colors">
+                    <MessageSquare className="w-4 h-4 text-gray-400" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
+          <h2 className="text-lg font-semibold mb-4">Actions</h2>
+          <div className="flex flex-wrap gap-3">
+            <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm flex items-center gap-2 transition-colors">
+              <Edit className="w-4 h-4" />
+              Edit Workout Plan
+            </button>
+            <button className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm flex items-center gap-2 transition-colors">
+              <MessageSquare className="w-4 h-4" />
+              Add Comment
+            </button>
+            <button className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm flex items-center gap-2 transition-colors">
+              <Activity className="w-4 h-4" />
+              Regenerate Plan
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default CoachDashboard;
 
