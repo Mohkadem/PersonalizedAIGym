@@ -111,6 +111,17 @@ const Schedule = () => {
     navigate("/member/preferences");
   };
 
+  const handleNext = async () => {
+    if (isEditMode) {
+      const success = await handleSaveEdit();
+      if (success) {
+        navigate("/member/landingPage");
+      }
+    } else {
+      handleNextOnboarding();
+    }
+  };
+
   const handleSaveEdit = async () => {
     if (!canContinue) return false;
 
@@ -262,21 +273,14 @@ const Schedule = () => {
             </button>
             <button
               disabled={!canContinue || loading}
-              onClick={async () => {
-                if (isEditMode) {
-                  await handleSaveEdit(); // <-- IMPORTANT
-                  navigate("/member/landingPage");
-                } else {
-                  handleNextOnboarding();
-                }
-              }}
+              onClick={handleNext}
               className={`px-4 py-2 rounded-lg font-semibold flex items-center gap-2 ${
                 canContinue && !loading
                   ? "bg-blue-600 hover:bg-blue-700"
                   : "bg-gray-600 cursor-not-allowed"
               }`}
             >
-              {isEditMode ? "Save changes" : "Next"}
+              {isEditMode ? (loading ? "Saving..." : "Save changes") : "Next"}
               {!isEditMode && <ChevronRight className="w-4 h-4" />}
             </button>
           </div>

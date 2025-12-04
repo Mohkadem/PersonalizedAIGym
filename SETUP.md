@@ -19,6 +19,8 @@ cd your-gym-ai
 
 ### 2. Install Dependencies
 
+**IMPORTANT**: This project has a monorepo structure with separate frontend and backend dependencies.
+
 #### Backend Dependencies
 ```bash
 cd backend
@@ -27,9 +29,15 @@ npm install
 
 #### Frontend Dependencies
 ```bash
-cd ../  # Go back to root directory
+cd ..  # Go back to root directory (where src/ folder is located)
 npm install
 ```
+
+**Note**: 
+- Frontend dependencies are installed at the **root** directory (where `src/` folder is)
+- Backend dependencies are installed in the `backend/` directory
+- Do NOT run `npm install` in the `src/` directory (it doesn't have a package.json)
+- The `client/` directory is a build artifact and should be ignored
 
 ### 3. Environment Setup
 
