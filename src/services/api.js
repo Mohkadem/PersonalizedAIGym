@@ -1,4 +1,4 @@
-const API_BASE_URL = "http://localhost:3001/api/v1";
+const API_BASE_URL = "https://personalized-ai-gym.vercel.app/api/v1";
 
 // Auth API functions
 export const authAPI = {
