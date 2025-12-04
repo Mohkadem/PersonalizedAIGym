@@ -124,10 +124,7 @@ const Schedule = () => {
         return false;
       }
 
-      const days = extractNumber(
-        daysPerWeek,
-        profile?.workoutDaysPerWeek || 3
-      );
+      const days = extractNumber(daysPerWeek, profile?.workoutDaysPerWeek || 3);
       const minutes = extractNumber(
         sessionLength,
         profile?.timePerWorkout || 60
@@ -247,42 +244,16 @@ const Schedule = () => {
             </div>
           </div>
 
-          {error && (
-            <p className="text-red-400 text-sm mt-2">
-              {error}
-            </p>
-          )}
+          {error && <p className="text-red-400 text-sm mt-2">{error}</p>}
 
           {/* Navigation Buttons */}
-          {/* <div className="flex justify-between pt-4 border-t border-gray-700">
-            <button
-              onClick={() =>
-                isEditMode ? navigate("/member") : navigate("/member/fitnessGoal")
-              }
-              className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold flex items-center gap-2"
-            >
-              <ChevronLeft className="w-4 h-4" />
-              {isEditMode ? "Cancel" : "Previous"}
-            </button>
-
-            <button
-              disabled={!canContinue || loading}
-              onClick={isEditMode ? handleSaveEdit : handleNextOnboarding}
-              className={`px-4 py-2 rounded-lg font-semibold flex items-center gap-2 ${
-                canContinue && !loading
-                  ? "bg-blue-600 hover:bg-blue-700"
-                  : "bg-gray-600 cursor-not-allowed"
-              }`}
-            >
-              {isEditMode ? (loading ? "Saving..." : "Save changes") : "Next"}
-              {!isEditMode && <ChevronRight className="w-4 h-4" />}
-            </button>
-          </div> */}
           {/* Button block */}
           <div className="flex justify-between pt-4 border-t border-gray-700">
             <button
               onClick={() =>
-                isEditMode ? navigate("/member/landingPage") : navigate("/member/fitnessGoal")
+                isEditMode
+                  ? navigate("/member/landingPage")
+                  : navigate("/member/fitnessGoal")
               }
               className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold flex items-center gap-2"
             >
@@ -293,7 +264,7 @@ const Schedule = () => {
               disabled={!canContinue || loading}
               onClick={async () => {
                 if (isEditMode) {
-                  await handleSaveEdit();       // <-- IMPORTANT
+                  await handleSaveEdit(); // <-- IMPORTANT
                   navigate("/member/landingPage");
                 } else {
                   handleNextOnboarding();
