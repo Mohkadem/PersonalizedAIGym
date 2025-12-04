@@ -65,10 +65,18 @@ const AdminDashboard = () => {
 
   const handleEditClick = (user) => {
     setEditingUser(user);
-    const currentCoach = coaches.find(
-      (coach) =>
-        coach.coachProfile?.clients?.includes(user._id)
+
+    const userIdStr = (user._id || user.id || "").toString();
+
+    // coaches is derived from allUsers: const coaches = allUsers.filter(u => u.role === "coach");
+    const currentCoach = coaches.find((coach) =>
+      (coach.coachProfile?.clients || []).some((client) => {
+        const clientId =
+          (client && (client._id || client.id)) || client; // populated doc or raw id
+        return clientId && clientId.toString() === userIdStr;
+      })
     );
+
     setEditForm({
       firstName: user.firstName,
       lastName: user.lastName,
@@ -82,8 +90,10 @@ const AdminDashboard = () => {
       goals: user.profile?.goals || [],
       availableEquipment: user.profile?.availableEquipment || [],
       workoutTime: user.preferences?.workoutTime || "",
+      speciality: user.coachProfile?.specialization?.join(", ") || "",
     });
-    setSelectedCoachId(currentCoach?._id || "");
+
+    setSelectedCoachId(currentCoach?._id || currentCoach?.id || "");
   };
 
   const handleSaveEdit = async () => {
@@ -99,33 +109,91 @@ const AdminDashboard = () => {
     setError("");
 
     try {
-      // Update user status if changed
-      if (editingUser.isActive !== editForm.isActive) {
-        await adminAPI.updateUserStatus(token, editingUser._id || editingUser.id, editForm.isActive);
+      const userId = editingUser._id || editingUser.id;
+
+      // Build profile update
+      const profileUpdate = {};
+      if (editForm.age !== "") profileUpdate.age = Number(editForm.age);
+      if (editForm.weight !== "") profileUpdate.weight = Number(editForm.weight);
+      if (editForm.height !== "") profileUpdate.height = Number(editForm.height);
+
+      if (editingUser.role === "user") {
+        if (editForm.gender) profileUpdate.gender = editForm.gender;
+        if (editForm.fitnessLevel)
+          profileUpdate.fitnessLevel = editForm.fitnessLevel;
+        profileUpdate.goals = editForm.goals || [];
+        profileUpdate.availableEquipment = editForm.availableEquipment || [];
       }
 
-      // Handle coach assignment if it's a client
+      const updateData = {
+        firstName: editForm.firstName,
+        lastName: editForm.lastName,
+        email: editForm.email,
+      };
+
+      if (Object.keys(profileUpdate).length > 0) {
+        updateData.profile = profileUpdate;
+      }
+
       if (editingUser.role === "user") {
-        const clientId = editingUser._id || editingUser.id;
-        const currentCoach = coaches.find(
-          (coach) => coach.coachProfile?.clients?.includes(clientId)
+        updateData.preferences = {
+          workoutTime: editForm.workoutTime || "",
+        };
+      } else if (editingUser.role === "coach") {
+        const specializationArray = (editForm.speciality || "")
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
+
+        updateData.coachProfile = {
+          specialization: specializationArray,
+          gender: editForm.gender,
+        };
+      }
+
+      // 1) Update profile/details
+      await adminAPI.updateUserProfile(token, userId, updateData);
+
+      // 2) Update user status if changed
+      if (editingUser.isActive !== editForm.isActive) {
+        await adminAPI.updateUserStatus(token, userId, editForm.isActive);
+      }
+
+      // 3) Handle coach assignment if it's a client
+      if (editingUser.role === "user") {
+        const clientId = userId;
+        const clientIdStr = (clientId || "").toString();
+
+        const currentCoach = coaches.find((coach) =>
+          (coach.coachProfile?.clients || []).some((client) => {
+            const cid =
+              (client && (client._id || client.id)) || client; // populated doc or raw id
+            return cid && cid.toString() === clientIdStr;
+          })
         );
 
-        // If coach changed, update assignment
         if (selectedCoachId && currentCoach?._id !== selectedCoachId) {
           // Remove from old coach if exists
           if (currentCoach) {
-            await adminAPI.removeCoachFromClient(token, clientId, currentCoach._id || currentCoach.id);
+            await adminAPI.removeCoachFromClient(
+              token,
+              clientId,
+              currentCoach._id || currentCoach.id
+            );
           }
           // Assign to new coach
           await adminAPI.assignCoachToClient(token, clientId, selectedCoachId);
         } else if (!selectedCoachId && currentCoach) {
           // Remove coach assignment
-          await adminAPI.removeCoachFromClient(token, clientId, currentCoach._id || currentCoach.id);
+          await adminAPI.removeCoachFromClient(
+            token,
+            clientId,
+            currentCoach._id || currentCoach.id
+          );
         }
       }
 
-      // Reload users to get updated data
+      // 4) Reload users to get updated data
       const usersResponse = await adminAPI.getAllUsers(token, { limit: 1000 });
       if (usersResponse.success && usersResponse.data) {
         const usersData = usersResponse.data.users || usersResponse.data || [];
@@ -188,8 +256,15 @@ const AdminDashboard = () => {
   };
 
   const getClientCoach = (clientId) => {
-    return coaches.find(
-      (coach) => coach.coachProfile?.clients?.includes(clientId)
+    const clientIdStr = (clientId || "").toString();
+
+    return coaches.find((coach) =>
+      (coach.coachProfile?.clients || []).some((client) => {
+        const cid =
+          (client && (client._id || client.id)) ||
+          client; // populated doc or raw id
+        return cid && cid.toString() === clientIdStr;
+      })
     );
   };
 
@@ -690,6 +765,57 @@ const UserDetailEditView = ({
                   onChange={(e) =>
                     setEditForm({ ...editForm, gender: e.target.value })
                   }
+                  className="w-48 px-2 py-1 bg-gray-700 text-gray-100 rounded border border-gray-600"
+                >
+                  <option value="">Select Gender</option>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                </select>
+              </div>
+              {user.role === "user" && (
+                <>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-400">Fitness Level</span>
+                    <select
+                      value={editForm.fitnessLevel}
+                      onChange={(e) =>
+                        setEditForm({
+                          ...editForm,
+                          fitnessLevel: e.target.value,
+                        })
+                      }
+                      className="w-48 px-2 py-1 bg-gray-700 text-gray-100 rounded border border-gray-600"
+                    >
+                      <option value="">Select Fitness Level</option>
+                      <option value="beginner">Beginner</option>
+                      <option value="intermediate">Intermediate</option>
+                      <option value="advanced">Advanced</option>
+                    </select>
+                  </div>
+                </>
+              )}
+
+              {user.role === "coach" && (
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-400">Speciality</span>
+                  <input
+                    type="text"
+                    value={editForm.speciality}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, speciality: e.target.value })
+                    }
+                    className="w-48 px-3 py-1 bg-gray-700 text-gray-100 rounded border border-gray-600"
+                    placeholder="e.g. strength, endurance"
+                  />
+                </div>
+              )}
+              {/* <div className="flex justify-between items-center">
+                <span className="text-gray-400">Gender</span>
+                <select
+                  value={editForm.gender}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, gender: e.target.value })
+                  }
                   className="w-48 px-3 py-1 bg-gray-700 text-gray-100 rounded border border-gray-600"
                 >
                   <option value="">Select Gender</option>
@@ -711,7 +837,7 @@ const UserDetailEditView = ({
                   <option value="intermediate">Intermediate</option>
                   <option value="advanced">Advanced</option>
                 </select>
-              </div>
+              </div> */}
               <div className="flex justify-between items-center">
                 <span className="text-gray-400">Status</span>
                 <label className="flex items-center gap-2 cursor-pointer">
@@ -780,7 +906,7 @@ const UserDetailEditView = ({
                     onChange={(e) =>
                       setEditForm({ ...editForm, workoutTime: e.target.value })
                     }
-                    className="ml-2 px-3 py-1 bg-gray-700 text-gray-100 rounded border border-gray-600"
+                    className="ml-2 px-2 py-1 bg-gray-700 text-gray-100 rounded border border-gray-600"
                   >
                     <option value="">Select Time</option>
                     <option value="morning">Morning</option>

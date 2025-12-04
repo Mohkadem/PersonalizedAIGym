@@ -18,6 +18,7 @@ const CoachDashboard = () => {
   const [selectedClient, setSelectedClient] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [clientLoading, setClientLoading] = useState(false);
 
   useEffect(() => {
     const loadDashboard = async () => {
@@ -29,11 +30,16 @@ const CoachDashboard = () => {
       }
 
       try {
-        const response = await coachAPI.getDashboardStats(token);
-        if (response.success && response.data) {
-          setDashboardData(response.data);
+        const stats = await coachAPI.getDashboardStats(token);
+        const clientsRes = await coachAPI.getClients(token);
+
+        if (stats.success && clientsRes.success) {
+          setDashboardData({
+            ...stats.data,
+            clients: clientsRes.data,
+          });
         } else {
-          setError(response.message || "Failed to load dashboard");
+          setError("Failed to load coach dashboard");
         }
       } catch (err) {
         setError("An error occurred while loading dashboard");
@@ -46,9 +52,30 @@ const CoachDashboard = () => {
     loadDashboard();
   }, []);
 
-  const handleClientClick = (client) => {
-    setSelectedClient(client);
+  const handleClientClick = async (clientData) => {
+    try {
+      setClientLoading(true);
+      setError("");
+
+      const token = getAuthToken();
+      const client = clientData.client || clientData;
+      const clientId = client._id;
+
+      const response = await coachAPI.getClientDetails(token, clientId);
+
+      if (response.success && response.data) {
+        setSelectedClient(response.data);
+      } else {
+        setError(response.message || "Failed to load client details");
+      }
+    } catch (err) {
+      console.error("Error loading client details:", err);
+      setError("An error occurred while loading client details");
+    } finally {
+      setClientLoading(false);
+    }
   };
+
 
   const handleBackToList = () => {
     setSelectedClient(null);
@@ -154,13 +181,17 @@ const CoachDashboard = () => {
                 <tbody className="divide-y divide-gray-700">
                   {clients.map((clientData) => {
                     const client = clientData.client || clientData;
-                    const activePlans = (clientData.nutritionPlans || []).filter(
-                      (p) => p.isActive
-                    ).length;
-                    const totalWorkouts = (clientData.workouts || []).length;
-                    const completedWorkouts = (clientData.workouts || []).filter(
-                      (w) => w.isCompleted
-                    ).length;
+                    const activePlans =
+                      clientData.activePlansCount ??
+                      (clientData.nutritionPlans || []).filter((p) => p.isActive).length;
+
+                    const totalWorkouts =
+                      clientData.workoutCounts?.total ??
+                      (clientData.workouts || []).length;
+
+                    const completedWorkouts =
+                      clientData.workoutCounts?.completed ??
+                      (clientData.workouts || []).filter((w) => w.isCompleted).length;
 
                     return (
                       <tr
@@ -240,13 +271,44 @@ const CoachDashboard = () => {
 };
 
 const ClientDetailView = ({ client, onBack }) => {
-  // client is already the full clientData object from API
+  // client is the full clientData object from getClientDetails
   const clientData = client;
 
-  const activePlan = (clientData.nutritionPlans || []).find((p) => p.isActive);
-  const completedWorkouts = (clientData.workouts || []).filter((w) => w.isCompleted);
-  const upcomingWorkouts = (clientData.workouts || []).filter((w) => !w.isCompleted);
   const clientUser = clientData.client || clientData;
+
+  const workouts = clientData.workouts || [];
+  const completedWorkouts = workouts.filter((w) => w.isCompleted);
+  const upcomingWorkouts = workouts.filter((w) => !w.isCompleted);
+
+  const activePlan = (clientData.nutritionPlans || []).find((p) => p.isActive) || clientData.nutritionPlan || null;
+
+  const getWorkoutTitle = (workout) => {
+    if (workout.name && workout.name.toLowerCase() !== "custom workout") {
+      return workout.name;
+    }
+    if (workout.focusArea) {
+      return workout.focusArea;
+    }
+    return "Workout";
+  };
+
+  const getWorkoutSubtitle = (workout) => {
+    // Prefer duration if available
+    if (workout.duration) {
+      return `${workout.duration} min`;
+    }
+
+    // Otherwise, use first exercise's sets x reps
+    if (workout.exercises && workout.exercises.length > 0) {
+      const first = workout.exercises[0];
+      const sets = first.sets || 0;
+      const reps = first.reps || "";
+      return `${sets} x ${reps} ${first.name}`;
+    }
+
+    // Fallback to workout type
+    return workout.workoutType || "";
+  };
 
   return (
     <div className="min-h-screen bg-gray-900 text-gray-100 p-8">
@@ -355,10 +417,10 @@ const ClientDetailView = ({ client, onBack }) => {
                 <UtensilsCrossed className="w-5 h-5" />
                 Active Nutrition Plan
               </h2>
-              <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm flex items-center gap-2 transition-colors">
+              {/* <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm flex items-center gap-2 transition-colors">
                 <Edit className="w-4 h-4" />
                 Edit Plan
-              </button>
+              </button> */}
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
@@ -407,15 +469,15 @@ const ClientDetailView = ({ client, onBack }) => {
               <Activity className="w-5 h-5" />
               Workouts
             </h2>
-            <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm flex items-center gap-2 transition-colors">
+            {/* <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm flex items-center gap-2 transition-colors">
               <Edit className="w-4 h-4" />
               Manage Workouts
-            </button>
+            </button> */}
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
             <div className="bg-gray-700/50 rounded-lg p-4">
               <p className="text-sm text-gray-400">Total Workouts</p>
-              <p className="text-2xl font-bold">{(clientData.workouts || []).length}</p>
+              <p className="text-2xl font-bold">{workouts.length}</p>
             </div>
             <div className="bg-gray-700/50 rounded-lg p-4">
               <p className="text-sm text-gray-400">Completed</p>
@@ -431,15 +493,15 @@ const ClientDetailView = ({ client, onBack }) => {
             </div>
           </div>
           <div className="space-y-2">
-            {(clientData.workouts || []).slice(0, 5).map((workout) => (
+            {workouts.slice(0, 5).map((workout) => (
               <div
                 key={workout._id}
                 className="flex items-center justify-between p-3 bg-gray-700/30 rounded-lg"
               >
                 <div>
-                  <p className="font-medium">{workout.name}</p>
+                  <p className="font-medium">{getWorkoutTitle(workout)}</p>
                   <p className="text-sm text-gray-400">
-                    {workout.workoutType} • {workout.duration} min
+                    {getWorkoutSubtitle(workout)}
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
@@ -452,9 +514,9 @@ const ClientDetailView = ({ client, onBack }) => {
                   >
                     {workout.isCompleted ? "Completed" : "Pending"}
                   </span>
-                  <button className="p-2 hover:bg-gray-700 rounded-lg transition-colors">
+                  {/* <button className="p-2 hover:bg-gray-700 rounded-lg transition-colors">
                     <MessageSquare className="w-4 h-4 text-gray-400" />
-                  </button>
+                  </button> */}
                 </div>
               </div>
             ))}
@@ -462,7 +524,7 @@ const ClientDetailView = ({ client, onBack }) => {
         </div>
 
         {/* Actions */}
-        <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
+        {/* <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
           <h2 className="text-lg font-semibold mb-4">Actions</h2>
           <div className="flex flex-wrap gap-3">
             <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm flex items-center gap-2 transition-colors">
@@ -478,7 +540,7 @@ const ClientDetailView = ({ client, onBack }) => {
               Regenerate Plan
             </button>
           </div>
-        </div>
+        </div> */}
       </div>
     </div>
   );

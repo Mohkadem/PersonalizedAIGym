@@ -235,21 +235,88 @@ class ParallelAIService {
     }
   }
 
+  static cleanMealMacros(meal) {
+    const cleanNumber = (val) => {
+      if (typeof val === "number") return val;
+      if (typeof val === "string") {
+        // Remove "g", "kcal", "cal", "grams", whitespace, etc.
+        const cleaned = val.replace(/[^\d.]/g, "");
+        return Number(cleaned) || 0;
+      }
+      return 0;
+    };
+
+    return {
+      ...meal,
+      calories: cleanNumber(meal.calories),
+      protein: cleanNumber(meal.protein),
+      carbs: cleanNumber(meal.carbs),
+      fat: cleanNumber(meal.fat),
+      fiber: cleanNumber(meal.fiber),
+    };
+  }
+
   /**
    * Parse meal response from AI
    */
-  static parseMealResponse(response) {
-    try {
-      // Try to extract JSON from response
-      const jsonMatch = response.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        return JSON.parse(jsonMatch[0]);
-      }
+  // static parseMealResponse(response) {
+  //   try {
+  //     // Try to extract JSON from response
+  //     const jsonMatch = response.match(/\{[\s\S]*\}/);
+  //     if (jsonMatch) {
+  //       return JSON.parse(jsonMatch[0]);
+  //     }
       
-      throw new Error('No valid JSON found in response');
-    } catch (error) {
-      console.error('Parse meal error:', error);
-      return null;
+  //     throw new Error('No valid JSON found in response');
+  //   } catch (error) {
+  //     console.error('Parse meal error:', error);
+  //     return null;
+  //   }
+  // }
+  // Robust JSON extractor for OpenAI responses
+  static parseMealResponse(rawText) {
+    try {
+      // STEP 1: Extract the first valid JSON block using bracket matching
+      const extractJSON = (text) => {
+        const start = text.indexOf("{");
+        if (start === -1) throw new Error("No JSON object found");
+
+        let depth = 0;
+        let end = start;
+
+        for (let i = start; i < text.length; i++) {
+          if (text[i] === "{") depth++;
+          if (text[i] === "}") depth--;
+
+          if (depth === 0) {
+            end = i;
+            break;
+          }
+        }
+
+        const jsonString = text.substring(start, end + 1);
+
+        return jsonString;
+      };
+
+      let jsonString = extractJSON(rawText);
+
+      // STEP 2: Remove trailing commas inside arrays or objects
+      jsonString = jsonString.replace(/,\s*([}\]])/g, "$1");
+
+      // STEP 3: Parse the cleaned JSON
+      let parsed = JSON.parse(jsonString);
+
+      // STEP 4: Clean macros
+      if (Array.isArray(parsed)) {
+        return parsed.map(meal => this.cleanMealMacros(meal));
+      } else {
+        return this.cleanMealMacros(parsed);
+      }
+    } catch (err) {
+      console.error("Final meal parse failure:", err);
+      console.error("RAW MEAL AI OUTPUT:", rawText);
+      throw new Error("Failed to parse meal JSON");
     }
   }
 }

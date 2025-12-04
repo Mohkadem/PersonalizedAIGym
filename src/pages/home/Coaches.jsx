@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import SearchBar from "./SearchBar";
 import CardCarousel from "./CardCarousel";
+import { publicAPI } from "../../services/api";
 // import Title from "./Title";
 
 // 👉 Local arbitrary coaches (static data)
@@ -34,9 +35,30 @@ const COACHES = [
 
 const Coaches = () => {
   const [search, setSearch] = useState("");
+  const [coaches, setCoaches] = useState(COACHES); // fallback to static
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadCoaches = async () => {
+      try {
+        const response = await publicAPI.getCoaches();
+        if (response.success && Array.isArray(response.data) && response.data.length > 0) {
+          // Backend already returns same shape as COACHES: { id, Trainer_Name, speciality }
+          setCoaches(response.data);
+        }
+      } catch (err) {
+        console.error("Error loading coaches:", err);
+        // keep the static COACHES fallback
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadCoaches();
+  }, []);
 
   // Filter based on search
-  const filteredCoaches = COACHES.filter((trainer) =>
+  const filteredCoaches = coaches.filter((trainer) =>
     trainer.Trainer_Name.toLowerCase().includes(search.toLowerCase())
   );
 
@@ -46,7 +68,7 @@ const Coaches = () => {
     description: `Speciality: ${trainer.speciality}`,
   }));
 
-  const noResults = search && filteredCoaches.length === 0;
+  const noResults = !loading && search && filteredCoaches.length === 0;
 
   return (
     <section className="w-full flex flex-col overflow-x-hidden" id="coaches">

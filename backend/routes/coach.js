@@ -9,6 +9,8 @@ router.use(auth.requireRole('coach'));
 
 // Dashboard
 router.get('/dashboard/stats', coachController.getDashboardStats);
+router.get('/clients', coachController.getClients);
+router.get('/clients/:clientId', coachController.getClientDetails);
 
 // Workout management
 router.put('/clients/:clientId/workouts/:workoutId', coachController.editClientWorkout);

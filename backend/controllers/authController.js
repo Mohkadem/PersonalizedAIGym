@@ -5,7 +5,7 @@ const bcrypt = require('bcryptjs');
 // Register new user
 const register = async (req, res) => {
   try {
-    const { email, password, firstName, lastName } = req.body;
+    const { email, password, firstName, lastName, role } = req.body;
 
     // Check if user already exists
     const existingUser = await User.findOne({ email });
@@ -16,13 +16,17 @@ const register = async (req, res) => {
       });
     }
 
+    // Determine valid role
+    const allowedRoles = ['user', 'coach', 'admin'];
+    const selectedRole = allowedRoles.includes(role) ? role : 'user';
+
     // Create user without profile (will be completed during onboarding)
     const userData = {
       email,
       password,
       firstName,
       lastName,
-      role: 'user',
+      role: selectedRole,
       isActive: true
     };
 
@@ -310,11 +314,43 @@ const logout = async (req, res) => {
   });
 };
 
+// Public: get active coaches for the marketing / home page
+const getPublicCoaches = async (req, res) => {
+  try {
+    const coaches = await User.find({ role: 'coach', isActive: true })
+      .select('firstName lastName coachProfile');
+
+    const data = coaches.map((coach) => ({
+      id: coach._id,
+      Trainer_Name: `${coach.firstName} ${coach.lastName}`,
+      speciality: coach.coachProfile &&
+        Array.isArray(coach.coachProfile.specialization) &&
+        coach.coachProfile.specialization.length > 0
+        ? coach.coachProfile.specialization.join(', ')
+        : 'Personal Training',
+    }));
+
+    res.status(200).json({
+      success: true,
+      data,
+    });
+  } catch (error) {
+    console.error('Error fetching public coaches:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching coaches',
+      error: error.message,
+    });
+  }
+};
+
+
 module.exports = {
   register,
   login,
   loginWithRole,
   getProfile,
   updateProfile,
-  logout
+  logout,
+  getPublicCoaches,
 };

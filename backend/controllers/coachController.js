@@ -9,6 +9,7 @@ const ChatService = require('../services/chatService');
 
 class CoachController {
   // Get coach's clients
+  // Get coach's clients
   async getClients(req, res) {
     try {
       const coachId = req.user.id;
@@ -28,9 +29,51 @@ class CoachController {
         });
       }
 
+      const clients = coach.coachProfile.clients || [];
+      const clientIds = clients.map((c) => c._id);
+
+      // Preload nutrition plans and workouts for summary counts
+      const [activePlans, workouts] = await Promise.all([
+        NutritionPlan.find({
+          userId: { $in: clientIds },
+          isActive: true,
+        }).select('userId'),
+        Workout.find({
+          userId: { $in: clientIds },
+        }).select('userId isCompleted'),
+      ]);
+
+      const activePlansMap = {};
+      activePlans.forEach((plan) => {
+        const key = String(plan.userId);
+        activePlansMap[key] = (activePlansMap[key] || 0) + 1;
+      });
+
+      const workoutCountsMap = {};
+      workouts.forEach((workout) => {
+        const key = String(workout.userId);
+        if (!workoutCountsMap[key]) {
+          workoutCountsMap[key] = { total: 0, completed: 0 };
+        }
+        workoutCountsMap[key].total += 1;
+        if (workout.isCompleted) {
+          workoutCountsMap[key].completed += 1;
+        }
+      });
+
+      const enrichedClients = clients.map((client) => {
+        const id = String(client._id);
+        const clientObj = client.toObject();
+        return {
+          ...clientObj,
+          activePlansCount: activePlansMap[id] || 0,
+          workoutCounts: workoutCountsMap[id] || { total: 0, completed: 0 },
+        };
+      });
+
       res.json({
         success: true,
-        data: coach.coachProfile.clients
+        data: enrichedClients,
       });
     } catch (error) {
       res.status(500).json({
@@ -70,13 +113,25 @@ class CoachController {
       const workoutSchedule = await WorkoutSchedule.findOne({ userId: clientId });
       const nutritionPlan = await NutritionPlan.findOne({ userId: clientId });
 
+      // Get all workouts for this client
+      const workouts = await Workout.find({ userId: clientId }).sort({
+        date: 1,
+        createdAt: 1,
+      });
+
+      const meals = await Meal.find({ userId: clientId });
+
+
       res.json({
         success: true,
         data: {
           client,
           workoutSchedule,
-          nutritionPlan
-        }
+          nutritionPlan,
+          nutritionPlans: nutritionPlan ? [nutritionPlan] : [],
+          workouts,
+          meals,
+        },
       });
     } catch (error) {
       res.status(500).json({
@@ -301,14 +356,21 @@ class CoachController {
         createdAt: { $gte: sevenDaysAgo }
       });
 
+      const coachInfo = {
+        firstName: coach.firstName,
+        lastName: coach.lastName,
+        email: coach.email,
+      };
+
       res.json({
         success: true,
         data: {
           totalClients,
           activeClients,
           recentWorkouts,
-          coachProfile: coach.coachProfile
-        }
+          coachProfile: coach.coachProfile,
+          coach: coachInfo,
+        },
       });
     } catch (error) {
       res.status(500).json({

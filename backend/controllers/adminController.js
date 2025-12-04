@@ -334,6 +334,45 @@ class AdminController {
     }
   }
 
+  // Update user profile/details (admin)
+  async updateUserProfile(req, res) {
+    try {
+      const { id } = req.params;
+      const updateData = { ...req.body };
+
+      // Do not allow these fields to be changed here
+      delete updateData.password;
+      delete updateData.role;
+      delete updateData.isActive;
+
+      const user = await User.findByIdAndUpdate(
+        id,
+        { $set: updateData },
+        { new: true, runValidators: true }
+      ).select('-password');
+
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: 'User not found'
+        });
+      }
+
+      return res.json({
+        success: true,
+        message: 'User updated successfully',
+        data: user
+      });
+    } catch (error) {
+      return res.status(500).json({
+        success: false,
+        message: 'Error updating user',
+        error: error.message
+      });
+    }
+  }
+
+
   // Update user status (activate/deactivate)
   async updateUserStatus(req, res) {
     try {

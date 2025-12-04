@@ -11,6 +11,7 @@ const SignUp = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [repeatedPassword, setRepeatedPassword] = useState("");
+  const [accountType, setAccountType] = useState("user");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -37,6 +38,7 @@ const SignUp = () => {
         password,
         firstName,
         lastName,
+        role: accountType,
       });
 
       if (!response.success) {
@@ -54,8 +56,14 @@ const SignUp = () => {
       localStorage.setItem("username", `${user.firstName} ${user.lastName}`);
       localStorage.setItem("refreshToken", tokens.refreshToken);
 
-      // Navigate to questionnaire
-      navigate("/member/questionary");
+      // Navigate based on role
+      if (user.role === "admin") {
+        navigate("/admin");
+      } else if (user.role === "coach") {
+        navigate("/coach/questionary");
+      } else {
+        navigate("/member/questionary");
+      }
     } catch (err) {
       setError("An error occurred. Please try again.");
       console.error("Signup error:", err);
@@ -153,6 +161,24 @@ const SignUp = () => {
                   className="px-4 py-2 bg-gray-700 text-gray-100 rounded border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 />
+              </div>
+
+              {/* Account Type */}
+              <div className="flex flex-col">
+                <label htmlFor="accountType" className="text-sm text-gray-400 mb-1">
+                  Account Type
+                </label>
+                <select
+                  id="accountType"
+                  value={accountType}
+                  onChange={(e) => setAccountType(e.target.value)}
+                  className="px-4 py-2 bg-gray-700 text-gray-100 rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                  required
+                >
+                  <option value="user">User</option>
+                  <option value="coach">Coach</option>
+                  <option value="admin">Admin</option>
+                </select>
               </div>
 
               {error && (

@@ -46,6 +46,7 @@ router.post('/meals/replace-meal', aiLimiter, userController.replaceMeal);
 // Daily Regeneration (with AI rate limiting)
 router.post('/workouts/regenerate-daily', aiLimiter, userController.regenerateDailyWorkout);
 router.post('/nutrition/regenerate-daily', aiLimiter, userController.regenerateDailyNutrition);
+router.post("/regenerate-full-plan", authenticate, userController.regenerateFullPlan);
 
 // Calendar and schedule routes
 router.get('/schedule/weekly', userController.getWeeklySchedule);
@@ -58,5 +59,6 @@ router.get('/workouts/:workoutId/progress', userController.getWorkoutProgress);
 
 // Profile management
 router.put('/profile', userController.updateProfile);
+
 
 module.exports = router;

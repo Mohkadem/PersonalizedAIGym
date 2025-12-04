@@ -77,6 +77,25 @@ export const authAPI = {
     });
     return response.json();
   },
+  regenerateFullPlan: async (token) => {
+    const response = await fetch(`${API_BASE_URL}/user/regenerate-full-plan`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json",
+      }
+    });
+
+    return response.json();
+  },
+};
+
+// Public (unauthenticated) API functions
+export const publicAPI = {
+  getCoaches: async () => {
+    const response = await fetch(`${API_BASE_URL}/auth/coaches`);
+    return response.json();
+  },
 };
 
 // User API functions
@@ -211,6 +230,19 @@ export const adminAPI = {
     return response.json();
   },
 
+  updateUserProfile: async (token, userId, updateData) => {
+    const response = await fetch(`${API_BASE_URL}/admin/users/${userId}/profile`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(updateData),
+    });
+    return response.json();
+  },
+
+
   updateUserStatus: async (token, userId, isActive) => {
     const response = await fetch(`${API_BASE_URL}/admin/users/${userId}/status`, {
       method: 'PATCH',
@@ -277,6 +309,18 @@ export const coachAPI = {
       headers: {
         'Authorization': `Bearer ${token}`,
       },
+    });
+    return response.json();
+  },
+  getClients: async (token) => {
+    const response = await fetch(`${API_BASE_URL}/coach/clients`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return response.json();
+  },
+  getClientDetails: async (token, clientId) => {
+    const response = await fetch(`${API_BASE_URL}/coach/clients/${clientId}`, {
+      headers: { Authorization: `Bearer ${token}` },
     });
     return response.json();
   },

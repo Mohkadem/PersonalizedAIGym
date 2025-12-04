@@ -55,7 +55,7 @@ const PersonalInfo = () => {
     onboardingStorage.save('weight', weight);
     
     console.log('Personal info saved:', { age, gender, height, weight });
-    navigate("/member/fitnessGaol");
+    navigate("/member/fitnessGoal");
   };
 
   return (
