@@ -17,8 +17,41 @@ connectDB();
 
 // Security middleware
 app.use(helmet());
+
+// CORS configuration - allow environment variable or use defaults
+const allowedOrigins = process.env.ALLOWED_ORIGINS 
+  ? process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim())
+  : [
+      'http://localhost:8080', 
+      'http://localhost:8081', 
+      'http://localhost:8082', 
+      'https://personalized-ai-gym.vercel.app'
+    ];
+
+// Add frontend URL from environment if provided
+if (process.env.FRONTEND_URL && !allowedOrigins.includes(process.env.FRONTEND_URL)) {
+  allowedOrigins.push(process.env.FRONTEND_URL);
+}
+
 app.use(cors({
-  origin: ['http://localhost:8080', 'http://localhost:8081', 'http://localhost:8082', 'https://personalized-ai-gym.vercel.app'], // Support multiple frontend ports
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    // Check if origin is in allowed list
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      // In development, be more permissive
+      if (process.env.NODE_ENV === 'development') {
+        console.warn(`CORS: Allowing origin ${origin} in development mode`);
+        callback(null, true);
+      } else {
+        console.warn(`CORS: Blocked origin ${origin}`);
+        callback(new Error('Not allowed by CORS'));
+      }
+    }
+  },
   credentials: true
 }));
 

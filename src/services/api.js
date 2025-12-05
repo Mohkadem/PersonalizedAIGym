@@ -1,27 +1,90 @@
-const API_BASE_URL = "https://personalized-ai-gym.vercel.app/api/v1";
+// Get API base URL from environment variable or use default
+// In development, use proxy (empty string) or localhost
+// In production, use the deployed backend URL
+const getApiBaseUrl = () => {
+  // Check for Vite environment variable first
+  if (import.meta.env.VITE_API_BASE_URL) {
+    return import.meta.env.VITE_API_BASE_URL;
+  }
+  
+  // In development, use proxy (empty string means relative URL)
+  if (import.meta.env.DEV) {
+    return '/api/v1';
+  }
+  
+  // Production fallback
+  return "https://personalized-ai-gym.vercel.app/api/v1";
+};
+
+const API_BASE_URL = getApiBaseUrl();
+
+// Helper function to handle fetch response errors
+const handleResponseError = async (response) => {
+  if (!response || !response.ok) {
+    let errorData;
+    try {
+      errorData = await response.json();
+    } catch (e) {
+      errorData = {
+        success: false,
+        message: response 
+          ? `Server error: ${response.status} ${response.statusText}`
+          : 'Network error. Please check your connection and try again.'
+      };
+    }
+    return errorData;
+  }
+  return null;
+};
 
 // Auth API functions
 export const authAPI = {
   register: async (userData) => {
-    const response = await fetch(`${API_BASE_URL}/auth/register`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(userData),
-    });
-    return response.json();
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/register`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(userData),
+      });
+      
+      const error = await handleResponseError(response);
+      if (error) return error;
+      
+      return response.json();
+    } catch (err) {
+      console.error("Register fetch error:", err);
+      return {
+        success: false,
+        message: "Network error. Please check your connection and try again.",
+        error: err.message
+      };
+    }
   },
 
   login: async (credentials) => {
-    const response = await fetch(`${API_BASE_URL}/auth/login`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(credentials),
-    });
-    return response.json();
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(credentials),
+      });
+      
+      const error = await handleResponseError(response);
+      if (error) return error;
+      
+      return response.json();
+    } catch (err) {
+      console.error("Login fetch error:", err);
+      return {
+        success: false,
+        message: "Network error. Please check your connection and try again.",
+        error: err.message
+      };
+    }
   },
 
   loginWithRole: async (credentials) => {
