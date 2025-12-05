@@ -18,7 +18,7 @@ connectDB();
 // Security middleware
 app.use(helmet());
 app.use(cors({
-  origin: ['http://localhost:8080', 'http://localhost:8081', 'http://localhost:8082'], // Support multiple frontend ports
+  origin: ['http://localhost:8080', 'http://localhost:8081', 'http://localhost:8082', 'https://personalized-ai-gym.vercel.app'], // Support multiple frontend ports
   credentials: true
 }));
 
